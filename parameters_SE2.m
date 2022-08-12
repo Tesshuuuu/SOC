@@ -12,7 +12,7 @@ n = 3; %state space dimension
 
 c = 1; %G=c.I
 % s2 = 0.01; %Sigma=s.I, s2=s^2
-s2 = [0.01;0.01;0.01];
+s2 = [0.01;0.01;0.001];
 
 a = 1; %R=a.I
 b = 1; %V=b.||x(t)||^2
@@ -22,16 +22,16 @@ e = 1;
 eta = 0.13; %lagrange multiplier
 % x0 = [-0.3; 0.3; 0]; %initial state of px, py, theta
 x0 = [1 0 -0.3; 0 1 0.3; 0 0 1]; %initial state of g
-runs = 100; %MC runs
-traj_num = 3; %number of trajectories to plot
+runs = 10000; %MC runs
+traj_num = 1; %number of trajectories to plot
 
 h = 0.01; % time step
 t0 = 0.0; %initial time
-T = 5; % final time
+T = 7; % final time
 %==========================================================================
 
 lambda = s2; %PDE linearization constant
-k = -e/T;
+k = -7*e/T;
 % s = sqrt(s2); %Sigma=s.I
 s = sqrt(s2);
 

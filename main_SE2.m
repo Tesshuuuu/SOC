@@ -7,9 +7,11 @@ fail_cnt = 0; %number of trajectories failed
 for traj_itr = 1:traj_num
     traj_itr
    
-    X = zeros(2,(T/h+1)); %to store all positions of this trajectory
-    X(1:2,1) = x0(1:2,3); %stack the initial position
-  
+%     X = zeros(2,(T/h+1)); %to store all positions of this trajectory
+    X = []; 
+%     X(1:2,1) = x0(1:2,3); %stack the initial position
+    X = [X,x0(1:2,3)];
+
     xt = x0;
 %     xt = zeros(3,1);
 %     xt(1:2) = x0(1:2,3); %start the state from the given initial position
@@ -56,8 +58,10 @@ for traj_itr = 1:traj_num
         
             for t_prime = t:h:T-h % this loop is to compute S(tau_i)
                 
-                S_tau = S_tau + h*b*(xt_prime(1:2,3).')*xt_prime(1:2,3); %add the state dependent running cost
-                
+%                 S_tau = S_tau + h*b*(xt_prime(1:2,3).')*xt_prime(1:2,3); %add the state dependent running cost
+                cos_half = xt_prime(1,1)*sin(0.5)+xt_prime(2,1)*cos(0.5)
+                S_tau = S_tau + h*b*(xt_prime(1:2,3).')*xt_prime(1:2,3) + h*2*acos(cos_half);
+
                 Rt_prime = xt_prime(1:2,1:2);
                 xt_prime = xt_prime + f_xt_prime*h; %move tau ahead
                 xt_prime(1:2,1:2) = xt_prime(1:2,1:2) + s(3)*Rt_prime*wedge(eps_t_prime(3)*sqrt(h));
@@ -77,7 +81,8 @@ for traj_itr = 1:traj_num
             end
           
             if(safe_flag_tau==1) %if tau has not collided 
-                S_tau = S_tau + d*(xt_prime(1:2,3).')*xt_prime(1:2,3); %add the terminal cost to S_tau
+                cos_half = xt_prime(1,1)*sin(0.5)+xt_prime(2,1)*cos(0.5)
+                S_tau = S_tau + d*(xt_prime(1:2,3).')*xt_prime(1:2,3) + h*2*acos(cos_half); %add the terminal cost to S_tau
             end
             
             S_tau_all(i) = S_tau;
@@ -88,13 +93,21 @@ for traj_itr = 1:traj_num
         eps_t_all_arr = gather(eps_t_all); %convert from GPU array to normal array (size: (n X runs))
         S_tau_all_arr = gather(S_tau_all); %convert from GPU array to normal array (size: (1 X runs))
 
-        denom_i = exp(-S_tau_all_arr/lambda(1)); %(size: (1 X runs))
+%         denom_i = exp(-S_tau_all_arr/lambda(1)); %(size: (1 X runs))
+
+        denom_iR = exp(-S_tau_all_arr/lambda(3));
+        denom_ip = exp(-S_tau_all_arr/lambda(1));
+
+%         numer = eps_t_all_arr*(denom_i.'); %(size: (3 X 1))
+        numer_R = wedge(eps_t_all_arr(3,:)*(denom_iR.')/sqrt(h)); %2 X 2
+        numer_p = eps_t_all_arr(1:2,:)*(denom_ip.');
+
+%         denom = sum(denom_i); %scalar
+        denom_R = sum(denom_iR);
+        denom_p = sum(denom_ip);
         
-        numer = eps_t_all_arr*(denom_i.'); %(size: (3 X 1))
-        denom = sum(denom_i); %scalar
-        
-        ut_R = -(s(1)*numer(3,1))/(sqrt(h)*denom);
-        ut_p = -(s(1)*numer(1:2,1))/(sqrt(h)*denom);
+        ut_R = -(s(3)*numer_R)/(denom_R);
+        ut_p = -(s(1)*numer_p(1:2,1))/(sqrt(h)*denom_p);
 
 %         ut = -(s*numer)/(sqrt(h)*denom); %the control input
         
@@ -114,11 +127,13 @@ for traj_itr = 1:traj_num
 %         ut_hat = zeros(3,3);
 %         ut_hat(1:2,1:2) = wedge(ut(3));
 %         ut_hat(1:2,3) = ut(1:2);
-        xt(1:2,1:2) = xt(1:2,1:2) + f_xt(1:2,1:2)*h + xt(1:2,1:2)*wedge(ut_R)*h + s(1)*xt(1:2,1:2)*wedge(eps(3)*sqrt(h));
-        xt(1:2,3) = xt(1:2,3) + f_xt(1:2,3)*h + xt(1:2,1:2)*ut_p*h + s(1)*xt(1:2,1:2)*eps(1:2)*sqrt(h);
+        Rt = xt(1:2,1:2);
+        xt(1:2,1:2) = Rt + f_xt(1:2,1:2)*h + Rt*ut_R*h + s(3)*Rt*wedge(eps(3)*sqrt(h));
+        xt(1:2,3) = xt(1:2,3) + f_xt(1:2,3)*h + Rt*ut_p*h + s(1)*Rt*eps(1:2)*sqrt(h);
 %         xt = xt + f_xt*h + xt*(ut_hat)*h + s*xt*eps*sqrt(h); %update the position with the control input ut=> x(t+h) = x(t) + f.h + g.u(t).h + sigma*dw
-%         X = [X,xt(1:2,3)]; %stack the new position
-        X(:,fix(t*100+2)) = xt(1:2,3);
+%         if (xt(1,3) ~= 0) && (xt(2,3) ~= 0)
+        X = [X,xt(1:2,3)]; %stack the new position
+%         end
         
         if(((xt(1,3)>=xR) && (xt(1,3)<=xS) && (xt(2,3)>=yR) && (xt(2,3)<=yS)) || ((xt(1,3)<=xP) || (xt(1,3)>=xQ) || (xt(2,3)<=yP) || (xt(2,3)>=yQ))) %if yes means trajectory has crossed the safe set
             fail_cnt = fail_cnt+1; 
