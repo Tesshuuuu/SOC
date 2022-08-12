@@ -51,6 +51,8 @@ for traj_itr = 1:traj_num
             
             S_tau_all(i) = S_tau;
         end
+
+        disp(t);
       
         eps_t_all_arr = gather(eps_t_all); %convert from GPU array to normal array (size: (n X runs))
         S_tau_all_arr = gather(S_tau_all); %convert from GPU array to normal array (size: (1 X runs))
