@@ -27,11 +27,11 @@ traj_num = 3; %number of trajectories to plot
 
 h = 0.01; % time step
 t0 = 0.0; %initial time
-T = 7; % final time
+T = 4; % final time
 %==========================================================================
 
 lambda = s2; %PDE linearization constant
-k = -7*e/T;
+k = -1.5*7*e/T;
 % s = sqrt(s2); %Sigma=s.I
 s = sqrt(s2);
 

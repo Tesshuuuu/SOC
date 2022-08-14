@@ -156,7 +156,7 @@ for traj_itr = 1:traj_num
         idx = idx+1;
     end
   
-    plot (X(1, 1:idx+1), X(2, 1:idx+1), 'b', 'LineWidth',1)
+    plot (X(1, 1:idx), X(2, 1:idx), 'b', 'LineWidth',1)
 end
  
 fail_prob = fail_cnt/traj_num

@@ -21,7 +21,7 @@ e = 1;
 eta = 0.13; %lagrange multiplier
 x0 = [-0.3; 0.3]; %initial position
 runs = 10000; %MC runs
-traj_num = 20; %number of trajectories to plot
+traj_num = 1; %number of trajectories to plot
 
 h = 0.01; % time step
 t0 = 0.0; %initial time
