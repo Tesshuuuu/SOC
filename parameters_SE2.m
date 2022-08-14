@@ -5,7 +5,7 @@ A = 0.5;
 B = 0.5;
 A_xi = 0.2;
 A_zeta = 0.4;
-B_eta = 0.2; 
+B_eta = 0.2;
 B_nu = 0.4;
 
 n = 3; %state space dimension
@@ -23,7 +23,7 @@ eta = 0.13; %lagrange multiplier
 % x0 = [-0.3; 0.3; 0]; %initial state of px, py, theta
 x0 = [1 0 -0.3; 0 1 0.3; 0 0 1]; %initial state of g
 runs = 10000; %MC runs
-traj_num = 1; %number of trajectories to plot
+traj_num = 3; %number of trajectories to plot
 
 h = 0.01; % time step
 t0 = 0.0; %initial time

@@ -66,6 +66,7 @@ for traj_itr = 1:traj_num
                 xt_prime = xt_prime + f_xt_prime*h; %move tau ahead
                 xt_prime(1:2,1:2) = xt_prime(1:2,1:2) + s(3)*Rt_prime*wedge(eps_t_prime(3)*sqrt(h));
                 xt_prime(1:2,3) = xt_prime(1:2,3) + s(1)*Rt_prime*eps_t_prime(1:2)*sqrt(h);
+            
 
                 if (((xt_prime(1,3)>=xR) && (xt_prime(1,3)<=xS) && (xt_prime(2,3)>=yR) && (xt_prime(2,3)<=yS)) || ((xt_prime(1,3)<=xP) || (xt_prime(1,3)>=xQ) || (xt_prime(2,3)<=yP) || (xt_prime(2,3)>=yQ)))%if yes means t_prime=t_exit
                     S_tau = S_tau + eta; %add the boundary cost to S_tau
@@ -81,11 +82,12 @@ for traj_itr = 1:traj_num
             end
           
             if(safe_flag_tau==1) %if tau has not collided 
-                cos_half = xt_prime(1,1)*sin(0.5)+xt_prime(2,1)*cos(0.5)
+                cos_half = xt_prime(1,1)*sin(0.5)+xt_prime(2,1)*cos(0.5);
                 S_tau = S_tau + d*(xt_prime(1:2,3).')*xt_prime(1:2,3) + h*2*acos(cos_half); %add the terminal cost to S_tau
             end
             
             S_tau_all(i) = S_tau;
+%             disp(i);
     
         end
         disp(t);
