@@ -74,7 +74,7 @@ for traj_itr = 1:traj_num
             end
             
             S_tau_all(i) = real(S_tau);
-            disp(i);
+%             disp(i);
     
         end
         disp(t);

@@ -31,7 +31,7 @@ T = 4; % final time
 %==========================================================================
 
 lambda = s2; %PDE linearization constant
-k = -1.5*7*e/T;
+k = -4*e/T;
 % s = sqrt(s2); %Sigma=s.I
 s = sqrt(s2);
 
