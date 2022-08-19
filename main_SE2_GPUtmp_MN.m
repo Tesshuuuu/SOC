@@ -16,6 +16,7 @@ for traj_itr = 1:traj_num
     idx = 1;
 
     xt = x0;
+    Rt = x0(1:2,1:2);
 %     xt = zeros(3,1);
 %     xt(1:2) = x0(1:2,3); %start the state from the given initial position
 %     xt(3) = calculate_theta(x0);
@@ -66,32 +67,37 @@ for traj_itr = 1:traj_num
             N = zeros(n,n);
 %             g = zeros(n,n*trj_seq+1);
             g = xt;
-            x_trj = zeros(n,trj_seq+1);
-            x_trj(:,1) = [xt(1,3); xt(2,3); xt(1,1)*sin(0.5)+xt(2,1)*cos(0.5)];
+%             x_trj = zeros(n,trj_seq+1);
+%             x_trj(:,1) = [xt(1,3); xt(2,3); xt(1,1)*sin(0.5)+xt(2,1)*cos(0.5)];
             sqrt_h = sqrt(h);
             eye_sigma = (1-s2(3))*eye(2);
             kh = 1 + k*h;
             M_acc = ones(3,3);
             N_acc = zeros(3,3);
+            S_tau = 0;
 
 
             for j = 1:trj_seq
                 M_acc = M_acc * [eye_sigma + s(3)*wedge(eps_trj(3,j)*sqrt_h), s(1)*sqrt_h*eps_trj(1:2,j); zeros(1,2), kh];
                 N_acc(3,3) = N_acc(3,3) + kh^j;
-                g = g * M_acc + N_acc;
-                x_trj(:,j+1) = [g(1,3); g(2,3); g(1,1)*sin(0.5)+g(2,1)*cos(0.5)];
+                g = g * M_acc - N_acc;
+%                 x_trj(:,j+1) = [g(1,3); g(2,3); g(1,1)*sin(0.5)+g(2,1)*cos(0.5)];
+                S_tau = S_tau + h*b*(g(1:2,3).')*g(1:2,3) + rot_coef*h*2*acos(g(1,1)*sin(0.5)+g(2,1)*cos(0.5));
                 if (((g(1,3)>=xR) && (g(1,3)<=xS) && (g(2,3)>=yR) && (g(2,3)<=yS)) || ((g(1,3)<=xP) || (g(1,3)>=xQ) || (g(1,3)<=yP) || (g(2,3)>=yQ)))%if yes means t_prime=t_exit
                     safe_flag_tau = 0;
+                    S_tau = S_tau + eta;
                     break; %end this tau 
                 end
             end
             
-            S_tau = h*b*(norm(x_trj(1,1:end-1))^2 + norm(x_trj(2,1:end-1))^2) + 0.003*sum(real(h*2*acos(x_trj(3,1:end-1))));
+%             S_tau = h*b*(norm(x_trj(1,1:end-1))^2 + norm(x_trj(2,1:end-1))^2) + 0.01*sum(real(h*2*acos(x_trj(3,1:end-1))));
             if safe_flag_tau == 1
-                S_tau = S_tau + d*(x_trj(1:2,end).')*x_trj(1:2,end) + 0.003*2*real(acos(x_trj(3,end)));
-            else
-                S_tau = S_tau + eta;
+%                 S_tau = S_tau + d*(x_trj(1:2,end).')*x_trj(1:2,end) + h*2*real(acos(x_trj(3,end)));
+                S_tau = S_tau + d*(g(1:2,3).')*g(1:2,3) + rot_coef*h*2*real(acos(g(1,1)*sin(0.5)+g(2,1)*cos(0.5)));
             end
+%             else
+%                 S_tau = S_tau + eta;
+%             end
 
                
         
@@ -126,13 +132,13 @@ for traj_itr = 1:traj_num
 %                 S_tau = S_tau + d*(xt_prime(1:2,3).')*xt_prime(1:2,3) + h*2*acos(cos_half); %add the terminal cost to S_tau
 %             end
             
-            S_tau_all(i) = S_tau;
+            S_tau_all(i) = real(S_tau);
 %             disp(i);
     
         end
-        if fix(t/0.01) == 50
-            disp(t);
-        end
+%         if fix(t/0.01) == 10
+%         disp(t);
+%         end
       
         eps_t_all_arr = gather(eps_t_all); %convert from GPU array to normal array (size: (n X runs))
         S_tau_all_arr = gather(S_tau_all); %convert from GPU array to normal array (size: (1 X runs))
@@ -172,9 +178,11 @@ for traj_itr = 1:traj_num
 %         ut_hat(1:2,1:2) = wedge(ut(3));
 %         ut_hat(1:2,3) = ut(1:2);
         Rt = xt(1:2,1:2);
+%         xt(1:2,1:2) = Rt + f_xt(1:2,1:2)*h + Rt*ut_R*h;
         xt(1:2,1:2) = Rt + f_xt(1:2,1:2)*h + Rt*ut_R*h + s(3)*Rt*wedge(eps(3)*sqrt(h));
 %         xt(1:2,1:2) = Rt + f_xt(1:2,1:2)*h + s(3)*Rt*wedge(eps(3)*sqrt(h));
         xt(1:2,3) = xt(1:2,3) + f_xt(1:2,3)*h + Rt*ut_p*h + s(1)*Rt*eps(1:2)*sqrt(h);
+%         xt(1:2,3) = xt(1:2,3) + f_xt(1:2,3)*h + Rt*ut_p*h;
 %         xt = xt + f_xt*h + xt*(ut_hat)*h + s*xt*eps*sqrt(h); %update the position with the control input ut=> x(t+h) = x(t) + f.h + g.u(t).h + sigma*dw
 %         if (xt(1,3) ~= 0) && (xt(2,3) ~= 0)
 %         X = [X,xt(1:2,3)]; %stack the new position
@@ -184,6 +192,7 @@ for traj_itr = 1:traj_num
         if(((xt(1,3)>=xR) && (xt(1,3)<=xS) && (xt(2,3)>=yR) && (xt(2,3)<=yS)) || ((xt(1,3)<=xP) || (xt(1,3)>=xQ) || (xt(2,3)<=yP) || (xt(2,3)>=yQ))) %if yes means trajectory has crossed the safe set
             fail_cnt = fail_cnt+1; 
             safe_flag_traj = 0;
+            disp(t);
             break;  %end this traj    
         end 
         
